@@ -27,6 +27,11 @@ return {
   keys = {
     -- Basic debugging keymaps, feel free to change to your liking!
     {
+      '<leader>du',
+      function() require('dapui').toggle() end,
+      desc = 'Load debug ui',
+    },
+    {
       '<F5>',
       function() require('dap').continue() end,
       desc = 'Debug: Start/Continue',
@@ -47,12 +52,12 @@ return {
       desc = 'Debug: Step Out',
     },
     {
-      '<leader>b',
+      '<leader>db',
       function() require('dap').toggle_breakpoint() end,
       desc = 'Debug: Toggle Breakpoint',
     },
     {
-      '<leader>B',
+      '<leader>dB',
       function() require('dap').set_breakpoint(vim.fn.input 'Breakpoint condition: ') end,
       desc = 'Debug: Set Breakpoint',
     },
