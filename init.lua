@@ -521,14 +521,12 @@ require('lazy').setup({
 
   { -- Highlight, edit, and navigate code
     'nvim-treesitter/nvim-treesitter',
-    config = function()
-      require('nvim-treesitter.configs').setup {
-        ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'cpp', 'c_sharp' },
-        auto_install = true,
-        highlight = { enable = true },
-        indent = { enable = true },
-      }
-    end,
+    opts = {
+      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'cpp', 'c_sharp' },
+      auto_install = true,
+      highlight = { enable = true },
+      indent = { enable = true },
+    },
   },
 
   -- The following comments only work if you have downloaded the kickstart repo, not just copy pasted the
