@@ -27,6 +27,11 @@ return {
   keys = {
     -- Basic debugging keymaps, feel free to change to your liking!
     {
+      '<leader>d',
+      function() end,
+      desc = 'Debug',
+    },
+    {
       '<leader>du',
       function() require('dapui').toggle() end,
       desc = 'Load debug ui',
