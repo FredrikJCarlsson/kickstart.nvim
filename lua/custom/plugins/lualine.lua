@@ -41,33 +41,17 @@ return {
         lualine_c = { 'filename' },
         lualine_x = {
           {
-            function()
-              local clients = package.loaded['copilot'] and vim.lsp.get_clients { name = 'copilot', bufnr = 0 } or {}
-              if #clients > 0 then
-                local status = require('copilot.status').data.status
-                if status == 'InProgress' then
-                  return ' …'
-                elseif status == 'Warning' then
-                  return ' !'
-                else
-                  return ' '
-                end
-              end
-              return ''
-            end,
-            color = function()
-              local clients = package.loaded['copilot'] and vim.lsp.get_clients { name = 'copilot', bufnr = 0 } or {}
-              if #clients > 0 then
-                local status = require('copilot.status').data.status
-                if status == 'Warning' then
-                  return { fg = '#e5c07b' }
-                elseif status == 'InProgress' then
-                  return { fg = '#61afef' }
-                end
-                return { fg = '#98c379' }
-              end
-            end,
+            'lsp_status',
+            icon = '',
+            symbols = {
+              spinner = { '⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏' },
+              done = '✓',
+              separator = ' ',
+            },
+            ignore_lsp = {},
+            show_name = true,
           },
+
           'encoding',
           'fileformat',
           'filetype',

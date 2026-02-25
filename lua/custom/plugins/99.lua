@@ -1,9 +1,7 @@
-if true then return {} end
+-- if true then return {} end
 return {
   'ThePrimeagen/99',
-  dependencies = {
-    { 'saghen/blink.compat', version = '2.*', lazy = true, opts = {} },
-  },
+  dependencies = {},
   config = function()
     local _99 = require '99'
 
@@ -62,7 +60,7 @@ return {
         --- What autocomplete do you use.  We currently only
         --- support cmp right now
         -- source = "cmp" | "blink",
-        source = 'blink',
+        source = 'cmp',
       },
 
       --- WARNING: if you change cwd then this is likely broken
