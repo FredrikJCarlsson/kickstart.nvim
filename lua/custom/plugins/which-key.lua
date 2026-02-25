@@ -12,6 +12,8 @@ return {
         { '<leader>s', group = '[S]earch', mode = { 'n', 'v' } },
         { '<leader>t', group = '[T]oggle' },
         { '<leader>h', group = 'Git [H]unk', mode = { 'n', 'v' } },
+        { '<C-s>', '<cmd>w<cr>', desc = 'Save buffer', mode = { 'n', 'i', 'v' } },
+        { '<leader>qq', '<cmd>qa<cr>', desc = 'Quit all' },
       },
     },
   },
