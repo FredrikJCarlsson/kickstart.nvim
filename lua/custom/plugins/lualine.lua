@@ -70,7 +70,7 @@ return {
       tabline = {},
       winbar = {},
       inactive_winbar = {},
-      extensions = {},
+      extensions = { 'overseer' },
     }
   end,
 }

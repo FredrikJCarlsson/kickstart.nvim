@@ -11,10 +11,10 @@ return {
     local cwd = vim.uv.cwd()
     local basename = vim.fs.basename(cwd)
     _99.setup {
-      -- provider = _99.Providers.ClaudeCodeProvider,  -- default: OpenCodeProvider
-      provide = _99.Providers.ClaudeCodeProvider,
+      provider = _99.Providers.ClaudeCodeProvider, -- default: OpenCodeProvider
+      model = 'claude-sonnet-4-5',
       logger = {
-        level = _99.DEBUG,
+        level = _99.ERROR,
         path = '/tmp/' .. basename .. '.99.debug',
         print_on_error = true,
       },
@@ -51,10 +51,10 @@ return {
 
         --- Configure @file completion (all fields optional, sensible defaults)
         files = {
-          -- enabled = true,
-          -- max_file_size = 102400,     -- bytes, skip files larger than this
-          -- max_files = 5000,            -- cap on total discovered files
-          -- exclude = { ".env", ".env.*", "node_modules", ".git", ... },
+          enabled = true,
+          max_file_size = 102400, -- bytes, skip files larger than this
+          max_files = 5000, -- cap on total discovered files
+          exclude = { '.env', '.env.*', 'node_modules', '.git' },
         },
 
         --- What autocomplete do you use.  We currently only
