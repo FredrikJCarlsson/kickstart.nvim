@@ -41,6 +41,9 @@ return {
         { '<leader>ob', icon = '' },
         { '<leader>ot', icon = '' },
         { '<leader>oc', icon = '󰃢' },
+
+        -- LSP
+        { 'ga', group = 'LSP', icon = '' },
       },
     },
   },
