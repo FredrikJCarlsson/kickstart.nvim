@@ -31,6 +31,16 @@ return {
         { '<leader>e', icon = '' },
         { '<leader>fb', icon = '' },
         { '<leader>fc', icon = '' },
+
+        -- overseer
+        { '<leader>o', group = 'Overseer', icon = '󰮔' },
+        { '<leader>ow', icon = '󱉯' },
+        { '<leader>oo', icon = '' },
+        { '<leader>oq', icon = '⚡' },
+        { '<leader>oi', icon = '' },
+        { '<leader>ob', icon = '' },
+        { '<leader>ot', icon = '' },
+        { '<leader>oc', icon = '󰃢' },
       },
     },
   },

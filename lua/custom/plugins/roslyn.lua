@@ -100,7 +100,7 @@ return {
     -- Whether or not to lock the solution target after the first attach.
     -- This will always attach to the target in `vim.g.roslyn_nvim_selected_solution`.
     -- NOTE: You can use `:Roslyn target` to change the target
-    lock_target = false,
+    lock_target = true,
   },
   -- config = function()
   --   -- Disable autoformat on save for C# buffers
