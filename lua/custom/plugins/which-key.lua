@@ -43,7 +43,7 @@ return {
         { '<leader>oc', icon = '󰃢' },
 
         -- LSP
-        { 'ga', group = 'LSP', icon = '' },
+        { 'ga', group = 'Calls', icon = '' },
       },
     },
   },
