@@ -42,6 +42,9 @@ return {
         { '<leader>ot', icon = '' },
         { '<leader>oc', icon = '󰃢' },
 
+        -- File
+        { '<leader>F', group = 'File', icon = '' },
+
         -- LSP
         { 'ga', group = 'Calls', icon = '' },
       },
