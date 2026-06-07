@@ -3,6 +3,10 @@ return {
   dependencies = { 'folke/snacks.nvim' },
   config = true,
   keys = {
+    -- Cursor-style AI shortcuts
+    { '<C-l>', '<cmd>ClaudeCode<cr>', mode = 'n', desc = 'Toggle Claude (Cursor-style)' },
+    { '<C-l>', '<cmd>ClaudeCodeSend<cr>', mode = 'v', desc = 'Send selection to Claude (Cursor-style)' },
+
     { '<leader>a', nil, desc = 'AI/Claude Code' },
     { '<leader>ac', '<cmd>ClaudeCode<cr>', desc = 'Toggle Claude' },
     { '<leader>af', '<cmd>ClaudeCodeFocus<cr>', desc = 'Focus Claude' },

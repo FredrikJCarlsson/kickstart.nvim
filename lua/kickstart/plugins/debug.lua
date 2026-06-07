@@ -91,6 +91,7 @@ return {
       ensure_installed = {
         -- Update this to ensure that you have the debuggers for the langs you want
         'delve',
+        'cppdbg', -- C/C++ via Microsoft vscode-cpptools (cross-platform)
       },
     }
 
@@ -140,5 +141,74 @@ return {
         detached = vim.fn.has 'win32' == 0,
       },
     }
+
+    -- ── C / C++ debugging (vscode-cpptools / cppdbg) ────────────────────────────
+    -- Cross-platform: local launch, attach, and remote gdbserver. Reads
+    -- .vscode/launch.json so VS Code-style configs work unchanged.
+    local is_win = vim.fn.has 'win32' == 1
+    local is_mac = vim.fn.has 'mac' == 1
+    local mason_root = vim.fn.stdpath 'data' .. '/mason'
+    local cpptools = mason_root .. '/packages/cpptools/extension/debugAdapters/bin/OpenDebugAD7' .. (is_win and '.exe' or '')
+
+    dap.adapters.cppdbg = {
+      id = 'cppdbg',
+      type = 'executable',
+      command = cpptools,
+      options = { detached = not is_win }, -- cpptools must NOT detach on Windows
+    }
+
+    -- Default MIMode: gdb on Win/Linux, lldb on macOS.
+    local mimode = is_win and 'gdb' or (is_mac and 'lldb' or 'gdb')
+
+    local cpp_configs = {
+      {
+        name = 'Launch (cppdbg)',
+        type = 'cppdbg',
+        request = 'launch',
+        program = function() return vim.fn.input('Path to executable: ', vim.fn.getcwd() .. '/', 'file') end,
+        cwd = '${workspaceFolder}',
+        stopAtEntry = false,
+        MIMode = mimode,
+        setupCommands = {
+          { description = 'Enable pretty-printing for gdb', text = '-enable-pretty-printing', ignoreFailures = true },
+        },
+      },
+      {
+        name = 'Attach to process (cppdbg)',
+        type = 'cppdbg',
+        request = 'attach',
+        program = function() return vim.fn.input('Path to executable: ', vim.fn.getcwd() .. '/', 'file') end,
+        processId = require('dap.utils').pick_process,
+        cwd = '${workspaceFolder}',
+        MIMode = mimode,
+      },
+      {
+        -- Remote: on target run `gdbserver host:port ./prog`, then launch this.
+        name = 'Remote attach via gdbserver (cppdbg)',
+        type = 'cppdbg',
+        request = 'launch',
+        program = function() return vim.fn.input('Path to LOCAL executable (with symbols): ', vim.fn.getcwd() .. '/', 'file') end,
+        cwd = '${workspaceFolder}',
+        MIMode = 'gdb',
+        miDebuggerServerAddress = function() return vim.fn.input('gdbserver address (host:port): ', 'localhost:1234') end,
+        miDebuggerPath = 'gdb',
+        setupCommands = {
+          { description = 'Enable pretty-printing for gdb', text = '-enable-pretty-printing', ignoreFailures = true },
+        },
+      },
+    }
+
+    dap.configurations.cpp = cpp_configs
+    dap.configurations.c = cpp_configs
+
+    -- Load .vscode/launch.json, mapping the cppdbg type onto c/cpp filetypes.
+    local function load_launchjs()
+      require('dap.ext.vscode').load_launchjs(nil, { cppdbg = { 'c', 'cpp' } })
+    end
+    load_launchjs()
+    vim.api.nvim_create_user_command('DapLoadLaunchJson', function()
+      load_launchjs()
+      vim.notify('Reloaded .vscode/launch.json', vim.log.levels.INFO)
+    end, { desc = 'Reload .vscode/launch.json into nvim-dap' })
   end,
 }

@@ -7,7 +7,8 @@ return {
       'hrsh7th/cmp-nvim-lsp',
       'hrsh7th/cmp-buffer',
       'hrsh7th/cmp-path',
-      'zbirenbaum/copilot-cmp',
+      -- NOTE: copilot-cmp removed; AI completion now comes from minuet (Ollama)
+      -- as virtual text, not through nvim-cmp.
     },
     opts = function()
       vim.api.nvim_set_hl(0, 'CmpGhostText', { link = 'Comment', default = true })
@@ -25,7 +26,16 @@ return {
           ['<C-p>'] = cmp.mapping.select_prev_item { behavior = cmp.SelectBehavior.Insert },
           ['<C-Space>'] = cmp.mapping.complete(),
           ['<C-e>'] = cmp.mapping.abort(),
-          ['<CR>'] = cmp.mapping.confirm { select = auto_select },
+          -- <CR> confirms the popup menu (Cursor-style: Tab=AI ghost text,
+          -- Enter=LSP/cmp menu). Only confirm when an item is actually
+          -- selected; otherwise pass through a real newline.
+          ['<CR>'] = cmp.mapping(function(fallback)
+            if cmp.visible() and cmp.get_active_entry() then
+              cmp.confirm { select = false }
+            else
+              fallback()
+            end
+          end, { 'i', 's' }),
           ['<C-y>'] = cmp.mapping.confirm { select = true },
           ['<S-CR>'] = cmp.mapping.confirm { behavior = cmp.ConfirmBehavior.Replace },
           ['<C-CR>'] = function(fallback)
@@ -34,7 +44,6 @@ return {
           end,
         },
         sources = cmp.config.sources({
-          { name = 'copilot' },
           { name = 'nvim_lsp' },
           { name = 'path' },
         }, {

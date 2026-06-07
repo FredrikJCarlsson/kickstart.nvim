@@ -1,3 +1,10 @@
+-- Copilot is DISABLED in favour of local Ollama tab-completion (see minuet.lua).
+-- To switch back to Copilot: delete/disable minuet.lua and `return` the table below
+-- instead of `{}` (remove the `if true then return {} end` guard).
+if true then
+  return {}
+end
+
 return {
   'zbirenbaum/copilot.lua',
   dependencies = {
