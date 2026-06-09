@@ -18,7 +18,12 @@
 --
 -- Public API: setup(opts), trigger(), accept() -> bool, dismiss(),
 -- is_pending() -> bool, toggle().
+--
+-- All options (providers, context sizing, keybindings) live in
+-- nextedit/config.lua; see lua/custom/plugins/nextedit.lua for a fully
+-- documented example configuration.
 
+local config_mod = require 'nextedit.config'
 local context = require 'nextedit.context'
 local parser = require 'nextedit.parser'
 local prompt = require 'nextedit.prompt'
@@ -27,24 +32,7 @@ local ui = require 'nextedit.ui'
 
 local M = {}
 
-local defaults = {
-  -- 'gemini' or 'openai_compatible' (DeepSeek / OpenRouter / Copilot / Zen
-  -- proxies all speak the same chat-completions dialect).
-  provider = 'gemini',
-  model = 'gemini-2.5-flash',
-  end_point = 'https://generativelanguage.googleapis.com/v1beta/models',
-  api_key = 'GEMINI_API_KEY', -- name of the environment variable
-  temperature = 0.1,
-  max_tokens = 512,
-  -- Auto-trigger on InsertLeave when the buffer changed; manual trigger is
-  -- always available via the keymap / :NextEdit.
-  auto_trigger = true,
-  debounce_ms = 400,
-  lsp_timeout_ms = 400,
-  filetypes = { 'c', 'cpp', 'lua', 'python', 'go', 'rust', 'cs', 'zig', 'javascript', 'typescript', 'typescriptreact', 'tsx' },
-}
-
-local config = vim.deepcopy(defaults)
+local config = config_mod.options
 
 local state = {
   enabled = true,
@@ -169,7 +157,7 @@ function M.trigger(opts)
   -- the user asked explicitly.
   if not recent and not opts.manual then return end
   -- A huge diff means the baseline is stale; re-anchor instead of sending it.
-  if recent and #vim.split(recent, '\n') > 120 then
+  if recent and #vim.split(recent, '\n') > config.context.max_diff_lines then
     rotate_baseline(bufnr)
     recent = nil
     if not opts.manual then return end
@@ -178,7 +166,7 @@ function M.trigger(opts)
   reset_run()
   local generation = state.generation
 
-  context.references_async(bufnr, win, config.lsp_timeout_ms, function(references)
+  context.references_async(bufnr, win, config.context.lsp_timeout_ms, function(references)
     if generation ~= state.generation or not vim.api.nvim_buf_is_valid(bufnr) or not vim.api.nvim_win_is_valid(win) then return end
 
     local payload = context.build(bufnr, win, recent, references)
@@ -245,8 +233,45 @@ local function debounced_trigger()
   end)
 end
 
+--- Keymaps are driven by config.keymap; set an entry to false and wire your
+--- own mapping against the public API instead.
+local function setup_keymaps()
+  local km = config.keymap or {}
+
+  if km.accept then
+    -- Insert mode: fast path first (minuet ghost text, if installed), then
+    -- the smart path (pending next-edit), then the literal key. The nvim-cmp
+    -- popup is confirmed with <CR> (see cmp.lua), never with Tab.
+    vim.keymap.set('i', km.accept, function()
+      local ok, minuet_vt = pcall(require, 'minuet.virtualtext')
+      if ok and minuet_vt.action.is_visible() then
+        minuet_vt.action.accept()
+      elseif M.is_pending() then
+        M.accept()
+      else
+        vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(km.accept, true, false, true), 'n', false)
+      end
+    end, { desc = 'Accept ghost text / next-edit, or fall through', silent = true })
+
+    -- Normal mode: apply the pending next-edit and jump to the next one
+    -- ("Tab to jump"). <Tab> falls back to its default jumplist motion.
+    vim.keymap.set('n', km.accept, function()
+      if not M.accept() then
+        local fallback = km.accept:lower() == '<tab>' and '<C-i>' or km.accept
+        vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(fallback, true, false, true), 'n', false)
+      end
+    end, { desc = 'Apply next-edit or fall through', silent = true })
+  end
+
+  if km.trigger then
+    vim.keymap.set({ 'n', 'i' }, km.trigger, function() M.trigger { manual = true } end, { desc = 'Predict next edit' })
+  end
+  if km.dismiss then vim.keymap.set('n', km.dismiss, M.dismiss, { desc = 'Dismiss next-edit' }) end
+end
+
 function M.setup(opts)
-  config = vim.tbl_deep_extend('force', vim.deepcopy(defaults), opts or {})
+  config = config_mod.setup(opts)
+  state.enabled = config.enabled
 
   local group = vim.api.nvim_create_augroup('nextedit', { clear = true })
 
@@ -283,6 +308,8 @@ function M.setup(opts)
 
   vim.api.nvim_create_user_command('NextEdit', function() M.trigger { manual = true } end, { desc = 'Predict next edit (smart path)' })
   vim.api.nvim_create_user_command('NextEditToggle', M.toggle, { desc = 'Toggle next-edit auto-trigger' })
+
+  setup_keymaps()
 end
 
 return M

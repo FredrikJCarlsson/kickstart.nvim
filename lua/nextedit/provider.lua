@@ -97,7 +97,9 @@ local function openai_extract(decoded)
 end
 
 --- opts: { provider, model, end_point, api_key (env var name), temperature,
----         max_tokens }, system + messages from prompt.lua.
+---         max_tokens, optional }, system + messages from prompt.lua.
+--- opts.optional is deep-merged into the request body for provider-specific
+--- tuning (gemini safetySettings, openai top_p, ...).
 function M.request(opts, system, messages, on_delta, on_done)
   local key = os.getenv(opts.api_key or '')
   if not key or key == '' then
@@ -113,7 +115,7 @@ function M.request(opts, system, messages, on_delta, on_done)
         parts = { { text = m.content } },
       }
     end
-    local body = vim.json.encode {
+    local body = {
       system_instruction = { parts = { { text = system } } },
       contents = contents,
       generationConfig = {
@@ -123,19 +125,21 @@ function M.request(opts, system, messages, on_delta, on_done)
         thinkingConfig = { thinkingBudget = 0 },
       },
     }
+    body = vim.tbl_deep_extend('force', body, opts.optional or {})
     local url = ('%s/%s:streamGenerateContent?alt=sse'):format(opts.end_point, opts.model)
-    curl_sse(url, { 'x-goog-api-key: ' .. key }, body, gemini_extract, on_delta, on_done)
+    curl_sse(url, { 'x-goog-api-key: ' .. key }, vim.json.encode(body), gemini_extract, on_delta, on_done)
   elseif opts.provider == 'openai_compatible' then
     local msgs = { { role = 'system', content = system } }
     vim.list_extend(msgs, messages)
-    local body = vim.json.encode {
+    local body = {
       model = opts.model,
       messages = msgs,
       temperature = opts.temperature,
       max_tokens = opts.max_tokens,
       stream = true,
     }
-    curl_sse(opts.end_point, { 'Authorization: Bearer ' .. key }, body, openai_extract, on_delta, on_done)
+    body = vim.tbl_deep_extend('force', body, opts.optional or {})
+    curl_sse(opts.end_point, { 'Authorization: Bearer ' .. key }, vim.json.encode(body), openai_extract, on_delta, on_done)
   else
     on_done(nil, 'nextedit: unknown provider ' .. tostring(opts.provider))
   end

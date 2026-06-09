@@ -5,11 +5,11 @@
 
 local M = {}
 
--- Max lines of the current buffer to send. Whole file if it fits,
--- otherwise a window centered on the cursor.
-local MAX_FILE_LINES = 400
-local MAX_DIAGNOSTICS = 12
-local MAX_REFERENCES = 10
+-- Size limits come from config.context (max_file_lines, max_diagnostics,
+-- max_references); see nextedit/config.lua.
+local function limits()
+  return require('nextedit.config').options.context
+end
 
 local function relpath(path)
   return vim.fn.fnamemodify(path, ':.')
@@ -20,11 +20,13 @@ local function current_file_section(bufnr, win)
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
   local row, col = unpack(vim.api.nvim_win_get_cursor(win))
 
+  -- Whole file if it fits, otherwise a window centered on the cursor.
+  local max_lines = limits().max_file_lines
   local first, last = 1, #lines
-  if #lines > MAX_FILE_LINES then
-    first = math.max(1, row - math.floor(MAX_FILE_LINES / 2))
-    last = math.min(#lines, first + MAX_FILE_LINES - 1)
-    first = math.max(1, last - MAX_FILE_LINES + 1)
+  if #lines > max_lines then
+    first = math.max(1, row - math.floor(max_lines / 2))
+    last = math.min(#lines, first + max_lines - 1)
+    first = math.max(1, last - max_lines + 1)
   end
 
   local out = {}
@@ -67,7 +69,7 @@ local function diagnostics_section(bufnr)
   end)
   local out = {}
   for _, d in ipairs(diags) do
-    if #out >= MAX_DIAGNOSTICS then break end
+    if #out >= limits().max_diagnostics then break end
     local name = vim.api.nvim_buf_get_name(d.bufnr or bufnr)
     if name ~= '' then
       local msg = (d.message or ''):gsub('\n.*', '')
@@ -118,7 +120,7 @@ function M.references_async(bufnr, win, timeout_ms, cb)
     local cursor_row = vim.api.nvim_win_is_valid(win) and vim.api.nvim_win_get_cursor(win)[1] or -100
     local out, seen = {}, {}
     for _, loc in ipairs(locations) do
-      if #out >= MAX_REFERENCES then break end
+      if #out >= limits().max_references then break end
       local uri = loc.uri or loc.targetUri
       local range = loc.range or loc.targetSelectionRange
       if uri and range then
