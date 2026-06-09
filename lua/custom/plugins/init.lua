@@ -3,7 +3,7 @@
 --
 -- See the kickstart.nvim README for more information
 vim.g.autoformat = false
-vim.o.clipboard = 'unnamedplus'
+-- NOTE: clipboard is set in init.lua (deferred via vim.schedule for startup time)
 
 vim.o.wrap = false
 

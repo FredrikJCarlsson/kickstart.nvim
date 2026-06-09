@@ -27,11 +27,13 @@ return {
           ['<C-Space>'] = cmp.mapping.complete(),
           ['<C-e>'] = cmp.mapping.abort(),
           -- <CR> confirms the popup menu (Cursor-style: Tab=AI ghost text,
-          -- Enter=LSP/cmp menu). Only confirm when an item is actually
-          -- selected; otherwise pass through a real newline.
+          -- Enter=LSP/cmp menu). When the menu is open, confirm the selected
+          -- entry; with auto_select the first item is preselected (but not yet
+          -- an "active entry"), so select = true confirms it directly without
+          -- needing to navigate down/up first. Otherwise pass a real newline.
           ['<CR>'] = cmp.mapping(function(fallback)
-            if cmp.visible() and cmp.get_active_entry() then
-              cmp.confirm { select = false }
+            if cmp.visible() then
+              cmp.confirm { select = true }
             else
               fallback()
             end

@@ -99,9 +99,9 @@ vim.g.have_nerd_font = true
 
 -- Make line numbers default
 vim.o.number = true
--- You can also add relative line numbers, to help with jumping.
---  Experiment for yourself to see if you like it!
--- vim.o.relativenumber = true
+-- Relative line numbers, to help with jumping. Combined with number above this
+-- gives a "hybrid" gutter: absolute number on the current line, relative elsewhere.
+vim.o.relativenumber = true
 
 -- Enable mouse mode, can be useful for resizing splits for example!
 vim.o.mouse = 'a'
@@ -294,12 +294,6 @@ require('lazy').setup({
   {
     -- Main LSP Configuration
     'neovim/nvim-lspconfig',
-    opts = {
-      servers = {
-        -- copilot.lua only works with its own copilot lsp server
-        copilot = { enabled = false },
-      },
-    },
     dependencies = {
       -- Automatically install LSPs and related tools to stdpath for Neovim
       -- Mason must be loaded before its dependents so we need to set it up here.
@@ -321,6 +315,11 @@ require('lazy').setup({
           'github:Crashdummyy/mason-registry',
         },
       }
+      -- mason.nvim 2.x no longer prepends its bin dir to PATH automatically, and
+      -- this config enables servers via vim.lsp.enable() directly (no
+      -- mason-lspconfig handlers). Without this, Neovim can't find Mason-installed
+      -- binaries like rust-analyzer. Prepend Mason's bin dir so they resolve.
+      vim.env.PATH = vim.fn.stdpath 'data' .. '/mason/bin' .. (vim.fn.has 'win32' == 1 and ';' or ':') .. vim.env.PATH
       -- Brief aside: **What is LSP?**
       --
       -- LSP is an initialism you've probably heard, but might not understand what it is.
@@ -420,13 +419,39 @@ require('lazy').setup({
         clangd = {},
         gopls = {},
         pyright = {},
-        -- rust_analyzer = {},
+        rust_analyzer = {},
         --
         -- Some languages (like typescript) have entire language plugins that can be useful:
         --    https://github.com/pmizio/typescript-tools.nvim
         --
         -- But for many setups, the LSP (`ts_ls`) will work just fine
         -- ts_ls = {},
+
+        -- Special Lua Config, as recommended by neovim help docs
+        lua_ls = {
+          on_init = function(client)
+            if client.workspace_folders then
+              local path = client.workspace_folders[1].name
+              if path ~= vim.fn.stdpath 'config' and (vim.uv.fs_stat(path .. '/.luarc.json') or vim.uv.fs_stat(path .. '/.luarc.jsonc')) then return end
+            end
+
+            client.config.settings.Lua = vim.tbl_deep_extend('force', client.config.settings.Lua, {
+              runtime = {
+                version = 'LuaJIT',
+                path = { 'lua/?.lua', 'lua/?/init.lua' },
+              },
+              workspace = {
+                checkThirdParty = false,
+                -- NOTE: this is a lot slower and will cause issues when working on your own configuration.
+                --  See https://github.com/neovim/nvim-lspconfig/issues/3189
+                library = vim.api.nvim_get_runtime_file('', true),
+              },
+            })
+          end,
+          settings = {
+            Lua = {},
+          },
+        },
       }
 
       -- Ensure the servers and tools above are installed
@@ -436,12 +461,20 @@ require('lazy').setup({
       --    :Mason
       --
       -- You can press `g?` for help in this menu.
-      local ensure_installed = vim.tbl_keys(servers or {})
-      vim.list_extend(ensure_installed, {
-        'lua-language-server', -- Lua Language server
+      -- NOTE: mason-tool-installer wants Mason *package* names (e.g.
+      -- `rust-analyzer`, `lua-language-server`), which differ from the lspconfig
+      -- names used in `servers` above (`rust_analyzer`, `lua_ls`). Without
+      -- mason-lspconfig to translate, list the Mason package names explicitly
+      -- here rather than deriving them from `vim.tbl_keys(servers)`.
+      local ensure_installed = {
+        'rust-analyzer', -- Rust LSP (lspconfig name: rust_analyzer)
+        'clangd',
+        'gopls',
+        'pyright',
+        'lua-language-server', -- Lua LSP (lspconfig name: lua_ls)
         'stylua', -- Used to format Lua code
         -- You can add other tools here that you want Mason to install
-      })
+      }
 
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
@@ -450,74 +483,16 @@ require('lazy').setup({
         vim.lsp.config(name, server)
         vim.lsp.enable(name)
       end
-
-      -- Special Lua Config, as recommended by neovim help docs
-      vim.lsp.config('lua_ls', {
-        on_init = function(client)
-          if client.workspace_folders then
-            local path = client.workspace_folders[1].name
-            if path ~= vim.fn.stdpath 'config' and (vim.uv.fs_stat(path .. '/.luarc.json') or vim.uv.fs_stat(path .. '/.luarc.jsonc')) then return end
-          end
-
-          client.config.settings.Lua = vim.tbl_deep_extend('force', client.config.settings.Lua, {
-            runtime = {
-              version = 'LuaJIT',
-              path = { 'lua/?.lua', 'lua/?/init.lua' },
-            },
-            workspace = {
-              checkThirdParty = false,
-              -- NOTE: this is a lot slower and will cause issues when working on your own configuration.
-              --  See https://github.com/neovim/nvim-lspconfig/issues/3189
-              library = vim.api.nvim_get_runtime_file('', true),
-            },
-          })
-        end,
-        settings = {
-          Lua = {},
-        },
-      })
-      vim.lsp.enable 'lua_ls'
     end,
   },
-
-  -- { -- Autocompletion (blink.cmp) -- uncomment to switch back from nvim-cmp
-  --   'saghen/blink.cmp',
-  --   event = 'VimEnter',
-  --   version = '1.*',
-  --   dependencies = {
-  --     -- Snippet Engine
-  --     {
-  --       'L3MON4D3/LuaSnip',
-  --       version = '2.*',
-  --       build = (function()
-  --         if vim.fn.has 'win32' == 1 or vim.fn.executable 'make' == 0 then return end
-  --         return 'make install_jsregexp'
-  --       end)(),
-  --       opts = {},
-  --     },
-  --   },
-  --   --- @module 'blink.cmp'
-  --   --- @type blink.cmp.Config
-  --   opts = {
-  --     keymap = { preset = 'default' },
-  --     appearance = { nerd_font_variant = 'mono' },
-  --     completion = {
-  --       documentation = { auto_show = false, auto_show_delay_ms = 500 },
-  --     },
-  --     sources = {
-  --       default = { 'lsp', 'path', 'snippets' },
-  --     },
-  --     snippets = { preset = 'luasnip' },
-  --     fuzzy = { implementation = 'lua' },
-  --     signature = { enabled = true },
-  --   },
-  -- },
 
   -- Highlight todo, notes, etc in comments
   { 'folke/todo-comments.nvim', event = 'VimEnter', dependencies = { 'nvim-lua/plenary.nvim' }, opts = { signs = false } },
 
   { -- Highlight, edit, and navigate code
     'nvim-treesitter/nvim-treesitter',
+    build = ':TSUpdate',
+    main = 'nvim-treesitter.configs', -- Sets main module to use for opts
     opts = {
       ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'cpp', 'c_sharp' },
       auto_install = true,
@@ -539,7 +514,7 @@ require('lazy').setup({
   require 'kickstart.plugins.indent_line',
   require 'kickstart.plugins.lint',
   require 'kickstart.plugins.autopairs',
-  require 'kickstart.plugins.neo-tree',
+  -- neo-tree removed: file explorer is Snacks.explorer (<leader>e or \, see custom/plugins/snacks.lua)
   require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
 
   -- NOTE: The import below can automatically add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`

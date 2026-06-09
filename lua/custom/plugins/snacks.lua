@@ -33,6 +33,7 @@ return {
     { '<leader>:', function() Snacks.picker.command_history() end, desc = 'Command History' },
     { '<leader>n', function() Snacks.picker.notifications() end, desc = 'Notification History' },
     { '<leader>e', function() Snacks.explorer() end, desc = 'File Explorer' },
+    { '\\', function() Snacks.explorer() end, desc = 'File Explorer' },
     -- find
     { '<leader>fb', function() Snacks.picker.buffers() end, desc = 'Buffers' },
     { '<leader>fc', function() Snacks.picker.files { cwd = vim.fn.stdpath 'config' } end, desc = 'Find Config File' },
@@ -54,7 +55,6 @@ return {
     { '<leader>gp', function() Snacks.picker.gh_pr() end, desc = 'GitHub Pull Requests (open)' },
     { '<leader>gP', function() Snacks.picker.gh_pr { state = 'all' } end, desc = 'GitHub Pull Requests (all)' },
     -- Grep
-    { '<leader>sb', function() Snacks.picker.lines() end, desc = 'Buffer Lines' },
     { '<leader>sB', function() Snacks.picker.grep_buffers() end, desc = 'Grep Open Buffers' },
     { '<leader>sg', function() Snacks.picker.grep() end, desc = 'Grep' },
     { '<leader>sw', function() Snacks.picker.grep_word() end, desc = 'Visual selection or word', mode = { 'n', 'x' } },
@@ -95,7 +95,7 @@ return {
     { '<leader>Z', function() Snacks.zen.zoom() end, desc = 'Toggle Zoom' },
     { '<leader>.', function() Snacks.scratch() end, desc = 'Toggle Scratch Buffer' },
     { '<leader>S', function() Snacks.scratch.select() end, desc = 'Select Scratch Buffer' },
-    { '<leader>n', function() Snacks.notifier.show_history() end, desc = 'Notification History' },
+    -- <leader>n is the notifications picker (see Top Pickers above)
     { '<leader>bd', function() Snacks.bufdelete() end, desc = 'Delete Buffer' },
     { '<leader>FR', function() Snacks.rename.rename_file() end, desc = 'Rename File' },
     { '<leader>gB', function() Snacks.gitbrowse() end, desc = 'Git Browse', mode = { 'n', 'v' } },

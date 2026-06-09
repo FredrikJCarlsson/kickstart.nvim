@@ -21,37 +21,71 @@ return {
   event = 'InsertEnter',
   config = function()
     require('minuet').setup {
-      -- Use Ollama's OpenAI-compatible /v1/completions FIM endpoint.
-      provider = 'openai_fim_compatible',
-      -- Keep it cheap for a local model; bump if your machine can take it.
+      -- Cloud completion via Google Gemini.
+      provider = 'gemini',
       n_completions = 1,
       context_window = 512,
 
       provider_options = {
-        openai_fim_compatible = {
-          -- Ollama ignores the key, but minuet requires a non-empty value;
-          -- TERM is always set in a shell environment.
-          api_key = 'TERM',
-          name = 'Ollama',
-          end_point = 'http://localhost:11434/v1/completions',
-          model = 'qwen2.5-coder:1.5b-base',
+        gemini = {
+          model = 'gemini-2.5-flash',
+          stream = true,
+          api_key = 'GEMINI_API_KEY',
+          end_point = 'https://generativelanguage.googleapis.com/v1beta/models',
           optional = {
-            max_tokens = 256,
-            top_p = 0.9,
-          },
-          -- qwen2.5-coder FIM: wrap context in the model's fill-in-the-middle
-          -- special tokens ourselves. Without this, Ollama/llama.cpp returns
-          -- chatty prose instead of a raw code completion. `suffix = false`
-          -- because llama.cpp's /v1/completions ignores the OpenAI `suffix`
-          -- field, so we embed the after-cursor text in the prompt instead.
-          template = {
-            prompt = function(context_before_cursor, context_after_cursor)
-              return '<|fim_prefix|>' .. context_before_cursor .. '<|fim_suffix|>' .. context_after_cursor .. '<|fim_middle|>'
-            end,
-            suffix = false,
+            generationConfig = {
+              maxOutputTokens = 256,
+              thinkingConfig = {
+                -- Disable thinking for gemini 2.5 models
+                thinkingBudget = 0,
+                -- Disable thinking for gemini 3.x models
+                -- thinkingLevel = 'minimal',
+                -- Setting only one of the above options is sufficient.
+              },
+            },
+            safetySettings = {
+              {
+                -- HARM_CATEGORY_HATE_SPEECH,
+                -- HARM_CATEGORY_HARASSMENT
+                -- HARM_CATEGORY_SEXUALLY_EXPLICIT
+                category = 'HARM_CATEGORY_DANGEROUS_CONTENT',
+                -- BLOCK_NONE
+                threshold = 'BLOCK_ONLY_HIGH',
+              },
+            },
           },
         },
       },
+
+      -- provider_options = {
+      --   openai_fim_compatible = {
+      --     -- Ollama ignores the key, but minuet requires a non-empty value;
+      --     -- TERM is always set in a shell environment.
+      --     api_key = 'TERM',
+      --     name = 'Ollama',
+      --     end_point = 'http://localhost:11434/v1/completions',
+      --     model = 'qwen2.5-coder:1.5b-base',
+      --     -- Stream partial results so ghost text can appear before the
+      --     -- request_timeout window closes (matters for a local model).
+      --     -- This is minuet's default; set explicitly for clarity.
+      --     stream = true,
+      --     optional = {
+      --       max_tokens = 256,
+      --       top_p = 0.9,
+      --     },
+      --     -- qwen2.5-coder FIM: wrap context in the model's fill-in-the-middle
+      --     -- special tokens ourselves. Without this, Ollama/llama.cpp returns
+      --     -- chatty prose instead of a raw code completion. `suffix = false`
+      --     -- because llama.cpp's /v1/completions ignores the OpenAI `suffix`
+      --     -- field, so we embed the after-cursor text in the prompt instead.
+      --     template = {
+      --       prompt = function(context_before_cursor, context_after_cursor)
+      --         return '<|fim_prefix|>' .. context_before_cursor .. '<|fim_suffix|>' .. context_after_cursor .. '<|fim_middle|>'
+      --       end,
+      --       suffix = false,
+      --     },
+      --   },
+      -- },
 
       virtualtext = {
         -- Auto-show ghost text in these filetypes (empty = manual trigger only).
