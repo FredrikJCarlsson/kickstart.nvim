@@ -15,6 +15,7 @@
 --
 -- This replaces Copilot as the <Tab> completion provider. Accept the whole
 -- suggestion with <Tab>; partial accept / cycle via the <A-*> maps below.
+if true then return {} end
 return {
   'milanglacier/minuet-ai.nvim',
   dependencies = { 'nvim-lua/plenary.nvim' },
