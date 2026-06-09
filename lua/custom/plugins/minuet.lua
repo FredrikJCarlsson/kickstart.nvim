@@ -14,6 +14,11 @@
 --
 -- Verify the exact FIM special tokens against the Qwen2.5-Coder model card
 -- for your tag - token spellings occasionally differ between releases.
+--
+-- DISABLED while testing the smart path (lua/nextedit/) on its own. The
+-- <Tab> handler in custom/plugins/nextedit.lua pcalls minuet, so it falls
+-- through cleanly. Delete the next line to re-enable the fast path.
+if true then return {} end
 return {
   'milanglacier/minuet-ai.nvim',
   dependencies = { 'nvim-lua/plenary.nvim' },
