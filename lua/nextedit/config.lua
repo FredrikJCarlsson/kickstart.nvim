@@ -14,7 +14,7 @@ M.defaults = {
   -- proxies, and local Ollama instruct models all speak the
   -- openai_compatible /chat/completions dialect.
   provider = 'gemini',
-  model = 'gemini-2.5-flash',
+  model = 'gemini-3.5-flash',
   -- gemini: base URL (model name is appended). openai_compatible: the FULL
   -- /chat/completions URL.
   end_point = 'https://generativelanguage.googleapis.com/v1beta/models',

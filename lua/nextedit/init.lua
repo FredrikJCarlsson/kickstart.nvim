@@ -135,11 +135,14 @@ local function cache_put(key, edits)
   state.cache[key] = edits
 end
 
-local function start_run(bufnr, edits)
+local function start_run(bufnr, edits, run_opts)
+  run_opts = run_opts or {}
   state.pending = edits
   state.origin_buf = bufnr
   state.touched = {}
-  show(1)
+  if not show(1) and run_opts.manual then
+    vim.notify('nextedit: predicted edits could not be located in buffer', vim.log.levels.WARN)
+  end
 end
 
 --- Fire a smart-path request. opts.manual bypasses the auto-trigger gates.
@@ -173,12 +176,16 @@ function M.trigger(opts)
     -- Cache on the exact payload: file content + cursor + recent edits +
     -- diagnostics. Identical context never re-requests.
     local key = vim.fn.sha256(payload)
-    local cached = cache_get(key)
-    if cached then
-      if #cached > 0 then start_run(bufnr, cached) end
-      return
+    -- Manual trigger always re-requests; cached empty results used to fail silently.
+    if not opts.manual then
+      local cached = cache_get(key)
+      if cached then
+        if #cached > 0 then start_run(bufnr, cached) end
+        return
+      end
     end
 
+    local run_opts = { manual = opts.manual }
     local rendered = false
     provider.request(config, prompt.system, prompt.messages(payload), function(text)
       -- Streaming: render edits as blocks complete.
@@ -188,7 +195,7 @@ function M.trigger(opts)
       if #edits == 0 then return end
       if not rendered then
         rendered = true
-        start_run(bufnr, edits)
+        start_run(bufnr, edits, run_opts)
       else
         state.pending = edits -- later blocks extend the queue
       end
@@ -197,16 +204,17 @@ function M.trigger(opts)
         if opts.manual then vim.notify(err, vim.log.levels.WARN) end
         return
       end
-      if generation ~= state.generation or not text then return end
+      if generation ~= state.generation then return end
+      if text == nil then return end
       local edits = parser.is_no_edit(text) and {} or parser.parse(text)
-      cache_put(key, edits)
+      if not opts.manual then cache_put(key, edits) end
       if #edits == 0 then
         if opts.manual then vim.notify('nextedit: no edit predicted', vim.log.levels.INFO) end
         reset_run()
         return
       end
       if not rendered then
-        start_run(bufnr, edits)
+        start_run(bufnr, edits, run_opts)
       else
         state.pending = edits
       end

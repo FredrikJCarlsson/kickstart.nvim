@@ -19,18 +19,47 @@ function M.cancel()
   end
 end
 
+--- Non-SSE error bodies (HTTP 4xx/5xx) arrive as plain JSON; curl still exits 0.
+local function parse_api_error(raw)
+  if not raw or raw:match '^%s*$' then return nil end
+  raw = raw:gsub('\n__HTTP__:%d+$', '')
+  if not raw:match '%S' then return nil end
+  local ok, decoded = pcall(vim.json.decode, raw)
+  if not ok or type(decoded) ~= 'table' then return nil end
+  local err = decoded.error
+  if type(err) ~= 'table' then return nil end
+  local msg = err.message or err.status or vim.inspect(err)
+  local code = err.code or decoded.code
+  if code then return ('nextedit: API error %s: %s'):format(tostring(code), msg:sub(1, 300)) end
+  return ('nextedit: %s'):format(msg:sub(1, 300))
+end
+
 --- Spawn curl, feed it `body`, and decode SSE `data:` lines as they arrive.
 --- extract(json) -> text delta. Callbacks are scheduled onto the main loop.
 local function curl_sse(url, headers, body, extract, on_delta, on_done)
   M.cancel()
 
-  local args = { 'curl', '-sS', '-N', '--no-buffer', '--max-time', '30', '-X', 'POST', url, '-H', 'Content-Type: application/json' }
+  local args = {
+    'curl',
+    '-sS',
+    '-N',
+    '--no-buffer',
+    '--max-time',
+    '30',
+    '-X',
+    'POST',
+    url,
+    '-H',
+    'Content-Type: application/json',
+  }
   for _, h in ipairs(headers) do
     args[#args + 1] = '-H'
     args[#args + 1] = h
   end
   args[#args + 1] = '--data-binary'
   args[#args + 1] = '@-'
+  args[#args + 1] = '--write-out'
+  args[#args + 1] = '\n__HTTP__:%{http_code}'
 
   local pending = ''
   local chunks = {}
@@ -70,11 +99,27 @@ local function curl_sse(url, headers, body, extract, on_delta, on_done)
       if this_request ~= active then return end -- cancelled or superseded
       active = nil
       local text = table.concat(chunks)
-      if res.code ~= 0 and text == '' then
-        on_done(nil, ('nextedit: curl exited with code %d: %s'):format(res.code, (res.stderr or ''):sub(1, 200)))
-      else
-        on_done(text, nil)
+
+      local http_code = tonumber(pending:match('__HTTP__:(%d+)$'))
+      local raw_body = pending:gsub('\n__HTTP__:%d+$', '')
+
+      if text == '' then
+        local api_err = parse_api_error(raw_body)
+        if api_err then
+          on_done(nil, api_err)
+          return
+        end
+        if res.code ~= 0 then
+          on_done(nil, ('nextedit: curl exited with code %d: %s'):format(res.code, (res.stderr or ''):sub(1, 200)))
+          return
+        end
+        if http_code and http_code >= 400 then
+          on_done(nil, ('nextedit: HTTP %d from API'):format(http_code))
+          return
+        end
       end
+
+      on_done(text, nil)
     end)
   end)
   active = this_request
